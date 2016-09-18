@@ -1,2 +1,2 @@
 A simple tool to convert a subset of the Mediawiki language to beautiful
-TeX. Primarily intended for the book [[https://de.wikibooks.org/wiki/Mathe_f%25C3%25BCr_Nicht-Freaks][Mathe für Nicht-Freaks]].
+TeX. Primarily intended for the book [[https://de.wikibooks.org/wiki/Mathe_f%C3%BCr_Nicht-Freaks][Mathe für Nicht-Freaks]].
