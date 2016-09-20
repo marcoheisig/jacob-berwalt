@@ -52,14 +52,11 @@ class BookNode
   end
 
   def to_s()
-    "#<BookNode" +
-      " :title " + (@title or "") +
-      " :link " + (@link or "") +
-      " :body " +
-      (if @body then
-        @body[0..10] + "..."
-      else "" end) +
-      ">"
+    result = "#<BookNode"
+    result << " title: " + @title if @title
+    result << " link: " + @link if @link
+    result << " body: " + @body[0..10] + "..." if @body
+    result << ">"
   end
 end
 
