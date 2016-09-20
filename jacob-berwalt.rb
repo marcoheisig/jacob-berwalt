@@ -15,42 +15,72 @@ Wikibook = 'Mathe für Nicht-Freaks'
 Sitemap  = ': Sitemap'
 Base_Url = 'https://de.wikibooks.org/w/index.php'
 
-class Book
-  def initialize(title, tocdepth = 2)
+class BookNode
+  def initialize(title: "", body: nil, link: nil)
     @title = title
-    @tocdepth = tocdepth
-    @tree = [title, "", []]
+    @body = body
+    @children = []
   end
 
-  def add_node(title, body, level)
+  def title()
+    @title
+  end
+
+  def body()
+    update_content
+    @body
+  end
+
+  def children()
+    update_content
+    @children
+  end
+
+  def add_child(child)
+    children.push( child )
+  end
+
+  def update_content()
+    return nil unless @link and not @body
+    # TODO
+  end
+end
+
+class Book
+  def initialize(title, tocdepth = 2)
+    @tocdepth = tocdepth
+    @tree = BookNode.new(title: title)
+  end
+
+  def add_node(level, **rest)
     tree = @tree
     for _ in 1..level do
-      tree = tree[2].last
+      tree = tree.children.last
     end
-    tree[2].push [title, body, []]
+    tree.add_child( BookNode.new(**rest) )
     self
   end
 
-  def add_chapter(title, body)
-    self.add_node(title, body, 0)
+  def add_chapter(**rest)
+    self.add_node(0, **rest)
   end
 
-  def add_section(title, body)
-    self.add_node(title, body, 1)
+  def add_section(**rest)
+    self.add_node(1, **rest)
   end
 
   def to_s()
-    "#<Book " + @tree.to_s + ">"
+    self.toc
   end
 
   def toc()
-    lines = ["Table of contents"]
+    lines = []
     tocnum = []
 
     tocgen = lambda {|tree|
-      lines.push tocnum.join(".") + " " + tree[0]
+      lines.push tocnum.join(".").ljust(5) + " "  + tree.title
       tocnum.push(1)
-      tree[2].each {|child|
+      tree.children.each {|child|
         tocgen.call(child)
         tocnum[-1] += 1
       }
@@ -108,9 +138,8 @@ end
 
 #books = wikipage_to_books('title=Mathe für Nicht-Freaks: Sitemap')
 # books.each { |book| book.to_tex }
-puts Book.new("TITLE").add_chapter("Chapter 1", "foo").add_section("Section 1", "bla").add_chapter("Chapter 2", "bar")
+puts Book.new("TITLE").add_chapter(title: "Chapter 1").add_section(title: "Section 1").add_chapter(title: "Chapter 2")
 
-books = wikipage_to_books(Wikibook + Sitemap)
-books.each { |book| puts book.toc }
+# books = wikipage_to_books(Wikibook + Sitemap)
+# books.each { |book| puts book.toc }
 
-puts books
