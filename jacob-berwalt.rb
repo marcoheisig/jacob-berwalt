@@ -4,6 +4,17 @@
 require "open-uri"
 require "net/http"
 
+# Regex for sitemap processing
+Sitemap_Section = /^\* +(?<section>.*)/
+Sitemap_Book    = /^== +(?<book>.*) +==/
+Sitemap_Chapter = /^=== +(?<chapter>.*) +===/
+Sitemap_Link    = /\[\[(?<link>[^|]*)\|(?<name>[^|]*)\]\]/
+
+# String constants
+Wikibook = 'Mathe für Nicht-Freaks'
+Sitemap  = ': Sitemap'
+Base_Url = 'https://de.wikibooks.org/w/index.php'
+
 class Book
   def initialize(title, tocdepth = 2)
     @title = title
@@ -13,7 +24,7 @@ class Book
 
   def add_node(title, body, level)
     tree = @tree
-    for i in 1..level do
+    for _ in 1..level do
       tree = tree[2].last
     end
     tree[2].push [title, body, []]
@@ -55,23 +66,51 @@ class Book
   end
 end
 
-Sitemap_Booktitle = /==\W*\[\[(.*)\|(.*)\]\]\W*==/
-Sitemap_Chapter = /===\W*(.*)\W*===/
-
 def fetch( item )
-  sitemap = 'https://de.wikibooks.org/w/index.php'
+  base = Base_Url
   what = URI.escape(item, /[^a-zA-Z\d\-._~!$&\'()*+,;=:@\/]/)
-  url = URI( sitemap + '?' + what + '&action=raw' )
+  url = URI( base + '?title=' + what + '&action=raw' )
   Net::HTTP.get( url ).force_encoding("UTF-8")
 end
+
+def expand_link(item)
+  if Sitemap_Link =~ item
+    link = Regexp.last_match['link']
+    name = Regexp.last_match['name']
+    return name, link
+  else
+    return item, ''
+  end
+end
+
 
 # A crude heuristic to turn a wikibooks page to several TOC (table of
 # contents) objects.
 def wikipage_to_books( item )
-  # TODO
-  array = fetch(item).split(Sitemap_Booktitle)
+  books = []
+  fetch(item).lines.each do |line|
+    if Sitemap_Section =~ line
+      section = Regexp.last_match['section']
+      name, body = expand_link(section)
+      books[-1].add_section(name, body)
+    elsif Sitemap_Book =~ line
+      book = Regexp.last_match["book"]
+      name, body = expand_link(book)
+      books.push Book.new(name, 2)
+    elsif Sitemap_Chapter =~ line
+      chapter = Regexp.last_match["chapter"]
+      name, body = expand_link(chapter)
+      books[-1].add_chapter(name, body)
+    end
+  end
+  books
 end
 
 #books = wikipage_to_books('title=Mathe für Nicht-Freaks: Sitemap')
 # books.each { |book| book.to_tex }
-testbook = Book.new("TITLE").add_chapter("Chapter 1", "foo").add_section("Section 1", "bla").add_chapter("Chapter 2", "bar")
+puts Book.new("TITLE").add_chapter("Chapter 1", "foo").add_section("Section 1", "bla").add_chapter("Chapter 2", "bar")
+
+books = wikipage_to_books(Wikibook + Sitemap)
+books.each { |book| puts book.toc }
+
+puts books
