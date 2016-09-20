@@ -32,6 +32,24 @@ class Book
     "#<Book " + @tree.to_s + ">"
   end
 
+  def toc()
+    lines = ["Table of contents"]
+    tocnum = []
+
+    tocgen = lambda {|tree|
+      lines.push tocnum.join(".") + " " + tree[0]
+      tocnum.push(1)
+      tree[2].each {|child|
+        tocgen.call(child)
+        tocnum[-1] += 1
+      }
+      tocnum.pop()
+    }
+
+    tocgen.call(@tree)
+    lines.join("\n")
+  end
+
   def to_tex()
     # TODO
   end
@@ -56,4 +74,4 @@ end
 
 #books = wikipage_to_books('title=Mathe für Nicht-Freaks: Sitemap')
 # books.each { |book| book.to_tex }
-puts Book.new("TITLE").add_chapter("Chapter 1", "foo").add_section("Section 1", "bla").add_chapter("Chapter 2", "bar")
+testbook = Book.new("TITLE").add_chapter("Chapter 1", "foo").add_section("Section 1", "bla").add_chapter("Chapter 2", "bar")
