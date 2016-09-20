@@ -25,6 +25,7 @@ class BookNode
   def initialize(title: "", body: nil, link: nil)
     @title = title
     @body = body
+    @link = link
     @children = []
   end
 
