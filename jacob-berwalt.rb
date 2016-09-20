@@ -4,6 +4,12 @@
 require "open-uri"
 require "net/http"
 
+LaTeX_Packages = ["[utf8]{inputenc}",
+                  "[T1]{fontenc}",
+                  "{amsmath}",
+                  "{amssymb}",
+                  "{hyperref}"]
+
 # Regex for sitemap processing
 Sitemap_Section = /^\* +(?<section>.*)/
 Sitemap_Book    = /^== +(?<book>.*) +==/
@@ -44,6 +50,17 @@ class BookNode
     return nil unless @link and not @body
     # TODO
   end
+
+  def to_s()
+    "#<BookNode" +
+      " :title " + (@title or "") +
+      " :link " + (@link or "") +
+      " :body " +
+      (if @body then
+        @body[0..10] + "..."
+      else "" end) +
+      ">"
+  end
 end
 
 class Book
@@ -61,12 +78,20 @@ class Book
     self
   end
 
+  def children()
+    @tree.children
+  end
+
   def add_chapter(**rest)
     self.add_node(0, **rest)
   end
 
   def add_section(**rest)
     self.add_node(1, **rest)
+  end
+
+  def title()
+    @tree.title()
   end
 
   def to_s()
@@ -92,7 +117,16 @@ class Book
   end
 
   def to_tex()
-    # TODO
+    title = self.title
+    filename = title + ".tex"
+    File.open(filename, 'w') {|file|
+      file.write("\\documentclass[11pt]{book}\n");
+      LaTeX_Packages.each{|package| file.write("\\usepackage#{package}\n")}
+      file.write("\\title{#{title}}\n");
+      file.write("\\begin{document}\n")
+      file.write("\\maketitle\n")
+      file.write("\\end{document}\n")
+    }
   end
 end
 
@@ -138,8 +172,9 @@ end
 
 #books = wikipage_to_books('title=Mathe für Nicht-Freaks: Sitemap')
 # books.each { |book| book.to_tex }
-puts Book.new("TITLE").add_chapter(title: "Chapter 1").add_section(title: "Section 1").add_chapter(title: "Chapter 2")
-
+testbook = Book.new("TITLE").add_chapter(title: "Chapter 1").add_section(title: "Section 1").add_chapter(title: "Chapter 2")
+# testbook.to_tex
+puts testbook.children
 # books = wikipage_to_books(Wikibook + Sitemap)
 # books.each { |book| puts book.toc }
 
