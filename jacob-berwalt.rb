@@ -23,7 +23,7 @@ Sitemap_Chapter = /^===(?<chapter>[^=]+)=== *$/
 Link            = /\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]/
 Section_Delim   = /^(=+.*=+)/
 Section_Subnode = /^(?<level>=+) *(?<name>.*) *\k<level>/
-Block           = /{{(?<what>[^|]+?)\|(<(?<tag>.+?)>)?(?<body>.+?)(<\/\k<tag>>)?}}/m
+Block           = /{{(?<what>[^|]+?)\|(<(?<tag>.+?)>)?(?<body>.+?)(?<tag><\/\k<tag>>)}}/m
 Tag_Block       = /<(?<tag>[^ ]+)(?<options>[^>]*)>(?<body>.+?)<\/\k<tag>>/m
 
 # String constants
@@ -197,7 +197,6 @@ class Book
     result = ["\\documentclass[11pt]{article}" ]
     LaTeX_Packages.each{|p| result << "\\usepackage#{p}"}
     result << "\\title{#{self.title}}"
-    result << "\\begin{document}"
     result << "\\begin{document}"
     result << "\\maketitle"
     result << "\\setcounter{tocdepth}{#{@tocdepth}}"
