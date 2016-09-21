@@ -10,6 +10,12 @@ LaTeX_Packages = ["[utf8]{inputenc}",
                   "{amssymb}",
                   "{hyperref}"]
 
+LaTeX_Headings = ["section",
+                  "subsection",
+                  "subsubsection",
+                  "paragraph",
+                  "subparagraph"]
+
 # Regex for sitemap processing
 Sitemap_Section = /^\* +(?<section>.*)/
 Sitemap_Book    = /^== +(?<book>.*) +==/
@@ -58,6 +64,21 @@ class BookNode
     result << " link: " + @link if @link
     result << " body: " + @body[0..10] + "..." if @body
     result << ">"
+  end
+
+  def to_latex(level = 0)
+    result = "\\#{LaTeX_Headings[level]}{#{@title}}\n"
+    if @body
+      body = String.new(self.body)
+      body.gsub!(/{{#invoke.+?}}/, '')
+      body.gsub!(/\[\[([^|]+\|([^|])+)\]\]/, "#{$2}")
+      # body.gsub!(/{\|.+?\|}/, "")
+      body.gsub!(/<ref>(.+?)<\/ref>/, '')
+      body.gsub!(/<math>(.+?)<\/math>/, '$$\1$$')
+      result << "\n" << body << "\n\n"
+    end
+    self.children.each{|c| result << c.to_latex(level + 1)}
+    result
   end
 end
 
@@ -114,17 +135,20 @@ class Book
     lines.join("\n")
   end
 
-  def to_tex()
-    title = self.title
-    filename = title + ".tex"
-    File.open(filename, 'w') {|file|
-      file.write("\\documentclass[11pt]{book}\n");
-      LaTeX_Packages.each{|package| file.write("\\usepackage#{package}\n")}
-      file.write("\\title{#{title}}\n");
-      file.write("\\begin{document}\n")
-      file.write("\\maketitle\n")
-      file.write("\\end{document}\n")
-    }
+  def to_latex()
+    result = ["\\documentclass[11pt]{article}" ]
+    LaTeX_Packages.each{|p| result << "\\usepackage#{p}"}
+    result << "\\title{#{self.title}}"
+    result << "\\begin{document}"
+    result << "\\begin{document}"
+    result << "\\maketitle"
+    result << "\\setcounter{tocdepth}{#{@tocdepth}}"
+    result << "\\tableofcontents"
+    result << "\\newpage"
+
+    self.children.each{|c| result << c.to_latex}
+    result << "\\end{document}"
+    result.join("\n")
   end
 end
 
@@ -170,9 +194,21 @@ end
 
 #books = wikipage_to_books('title=Mathe für Nicht-Freaks: Sitemap')
 # books.each { |book| book.to_tex }
-testbook = Book.new("TITLE").add_chapter(title: "Chapter 1").add_section(title: "Section 1").add_chapter(title: "Chapter 2")
-# testbook.to_tex
-puts testbook.children
+testbook = Book.new("The Testbook")
+testbook.add_chapter(title: "Chapter 1",
+                     body: "This chapter contains no sections.")
+testbook.add_chapter(title: "Chapter 2",
+                     body: "This chapter contains one section.")
+testbook.add_section(title: "Section 1",
+                     body:
+                       "{{#invoke:Mathe für Nicht-Freaks/Seite|oben}}
+
+Kommen wir nun zum Wurzelkriterium, welches ein mächtiges Kriterium ist, um die Konvergenz einer konkret gegebenen Reihe auszurechnen. Es basiert auf dem Majorantenkriterium, wobei hier die Konvergenz einer Reihe auf die Konvergenz der geometrischen Reihe <math>\\sum_{k=1}^\\infty q^k</math> mit <math>0\\le q < 1</math> zurückgeführt wird.
+
+Das Wurzelkriterium wurde zuerst 1821 vom französischen Mathematiker [[w:Augustin Louis Cauchy|Augustin Louis Cauchy]] in seinem Lehrbuch „Cours d'analyse“ veröffentlicht<ref>Siehe [http://hsm.stackexchange.com/a/2862/1772 die Antwort auf die Frage „Where is the root test first proved“] der Q&A Webseite „History of Science and Mathematics“</ref>. Deswegen wird es auch „Wurzelkriterium von Cauchy“ genannt.")
+testbook
+print testbook.to_latex
+# puts testbook.children
 # books = wikipage_to_books(Wikibook + Sitemap)
 # books.each { |book| puts book.toc }
 
