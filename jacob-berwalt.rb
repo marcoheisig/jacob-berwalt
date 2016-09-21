@@ -20,9 +20,11 @@ LaTeX_Headings = ["section",
 Sitemap_Section = /^\* +(?<section>.*)/
 Sitemap_Book    = /^== +(?<book>.*) +==/
 Sitemap_Chapter = /^=== +(?<chapter>.*) +===/
-Sitemap_Link    = /\[\[(?<link>[^|]*)\|(?<name>[^|]*)\]\]/
+Link    = /\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]/
 Section_Delim   = /^(=+ +.* +=+)/
 Section_Subnode = /^(?<level>=+) +(?<name>.*) +\k<level>/
+Block   = /{{(?<link>[^|]+?)\|(?<name>[^|]+?)}}/
+Math_Block = /<math>(.+?)<\/math>/
 
 # String constants
 Wikibook = 'Mathe für Nicht-Freaks'
@@ -79,6 +81,7 @@ class BookNode
     end
 
     # built the tree
+    return if subtree.empty?
     top_level = subtree[0][0]
     subtree.each do |child|
       current_node = self
@@ -105,11 +108,17 @@ class BookNode
     result = "\\#{LaTeX_Headings[level]}{#{@title}}\n"
     if @body
       body = String.new(self.body)
-      body.gsub!(/{{#invoke.+?}}/, '')
-      body.gsub!(/\[\[([^|]+\|([^|])+)\]\]/, "#{$2}")
-      # body.gsub!(/{\|.+?\|}/, "")
+      # deal with {{ ... | ... }} blocks
+      body.gsub!(Block) do |link, name|
+        return name.gsub(Math_Block, '\1') if link[/^Formel/]
+        ""
+      end
+      # replace links by names (TODO make them hyperref links)
+      body.gsub!(/\[\[([^|]+?\|([^|])+?)\]\]/, "#{$2}")
+      # remove references
       body.gsub!(/<ref>(.+?)<\/ref>/, '')
-      body.gsub!(/<math>(.+?)<\/math>/, '$$\1$$')
+      # convert <math> environments to plain LaTeX
+      body.gsub!(Math_Block, '$$\1$$')
       result << "\n" << body << "\n\n"
     end
     self.children.each{|c| result << c.to_latex(level + 1)}
@@ -195,7 +204,7 @@ def fetch( item )
 end
 
 def expand_link(item)
-  if Sitemap_Link =~ item
+  if Link =~ item
     link = Regexp.last_match['link']
     name = Regexp.last_match['name']
     return name, link
@@ -230,4 +239,4 @@ end
 
 books = wikipage_to_books(Wikibook + Sitemap)
 
-puts books[0].children[1].children[1].children[2].children
+puts books[0].to_latex
