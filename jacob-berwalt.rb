@@ -120,16 +120,25 @@ class BookNode
           result << body
           result << "\n\\end{align*}\n"
         else
+          STDERR.print "A #{what} clause has been ignored.\n"
           ""
         end
       end
       # convert <FOO>...</FOO> environments to plain LaTeX
       latex.gsub!(Tag_Block) do |s|
         tag = Regexp.last_match['tag']
+        options = Regexp.last_match['options']
         body =  Regexp.last_match['body']
         if tag[/^math/]
           "$$#{body}$$"
+        elsif tag[/^dfn/]
+          if options[/title="(.*)"/]
+            "\\emph{#{$1}}"
+          else
+            "\\emph{#{body}}"
+          end
         else
+          STDERR.print "A #{tag} block has been ignored.\n"
           ""
         end
       end
