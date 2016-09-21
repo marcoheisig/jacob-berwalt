@@ -133,6 +133,26 @@ class BookNode
           ""
         end
       end
+
+      # convert '''' to \textit{}
+      latex.gsub!(/(?<b>[^'])''(?<word>[^']+)''(?<a>[^'])/) do |s|
+        Regexp.last_match["b"] + '\textit{' + Regexp.last_match["word"] + '}' + Regexp.last_match["a"]
+      end
+
+      # convert '''''' to \textbf{}
+      latex.gsub!(/(?<b>[^'])'''(?<word>[^']+)'''(?<a>[^'])/) do |s|
+        Regexp.last_match["b"] + '\textbf{' + Regexp.last_match["word"] + '}' + Regexp.last_match["a"]
+      end
+
+      # items
+      latex.gsub!(/^ *\* /, '\item ')
+      latex.gsub!(/^(?<old>(?!\\item).*?)\\item/m) do |s|
+        Regexp.last_match["old"] + "\n\\begin{itemize}\n\\item"
+      end
+      latex.gsub!(/^(?<last>\\item.*?)\n(?!\\item)/m) do |s|
+        Regexp.last_match["last"] + "\n\\end{itemize}\n"
+      end
+
       result << "\n" << latex << "\n\n"
     end
     self.children.each{|c| result << c.to_latex(level + 1)}
