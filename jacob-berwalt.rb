@@ -17,9 +17,9 @@ LaTeX_Headings = ["section",
                   "subparagraph"]
 
 # Regex for sitemap processing
-Sitemap_Section = /^\* *(?<section>.*)/
-Sitemap_Book    = /^== *(?<book>.*) *==/
-Sitemap_Chapter = /^=== *(?<chapter>.*) *===/
+Sitemap_Section = /^\*(?<section>.+)$/
+Sitemap_Book    = /^==(?<book>[^=]+)== *$/
+Sitemap_Chapter = /^===(?<chapter>[^=]+)=== *$/
 Link            = /\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]/
 Section_Delim   = /^(=+.*=+)/
 Section_Subnode = /^(?<level>=+) *(?<name>.*) *\k<level>/
@@ -91,6 +91,7 @@ class BookNode
         level -= 1
         current_node = current_node.children[-1]
       end
+      puts @title unless current_node
       current_node.add_child(BookNode.new(title: title, body: body))
     end
   end
@@ -246,4 +247,4 @@ end
 
 books = wikipage_to_books(Wikibook + Sitemap)
 
-puts books[2].to_latex
+puts books[5].to_latex
