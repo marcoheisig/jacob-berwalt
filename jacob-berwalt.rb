@@ -23,8 +23,8 @@ Sitemap_Chapter = /^===(?<chapter>[^=]+)=== *$/
 Link            = /\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]/
 Section_Delim   = /^(=+.*=+)/
 Section_Subnode = /^(?<level>=+) *(?<name>.*) *\k<level>/
-Block           = /{{(?<what>[^|]+?)\|<(?<tag>.+?)>(?<body>.+?)<\/\k<tag>>}}/
-Math_Block      = /<math>(.+?)<\/math>/
+Block           = /{{(?<what>[^|]+?)\|(<(?<tag>.+?)>)?(?<body>.+?)(<\/\k<tag>>)?}}/m
+Tag_Block       = /<(?<tag>[^ ]+)(?<options>[^>]*)>(?<body>.+?)<\/\k<tag>>/m
 
 # String constants
 Wikibook = 'Mathe für Nicht-Freaks'
@@ -105,11 +105,13 @@ class BookNode
   end
 
   def to_latex(level = 0)
-    result = "\\#{LaTeX_Headings[level]}{#{@title}}\n"
+    result = "\n\\#{LaTeX_Headings[level]}{#{@title}}\n"
     if @body
-      body = String.new(self.body)
+      latex = String.new(self.body)
+      # first expand blocks like "Satz" because they may contain additional parens
+
       # deal with {{ ... | ... }} blocks
-      body.gsub!(Block) do |s|
+      latex.gsub!(Block) do |s|
         what = Regexp.last_match['what']
         tag = Regexp.last_match['tag']
         body =  Regexp.last_match['body']
@@ -117,17 +119,21 @@ class BookNode
           result = "\n\\begin{align*}\n"
           result << body
           result << "\n\\end{align*}\n"
-          return result
+        else
+          ""
         end
-        ""
       end
-      # replace links by names (TODO make them hyperref links)
-      body.gsub!(/\[\[([^|]+?\|([^|])+?)\]\]/, "#{$2}")
-      # remove references
-      body.gsub!(/<ref>(.+?)<\/ref>/, '')
-      # convert <math> environments to plain LaTeX
-      body.gsub!(Math_Block, '$$\1$$')
-      result << "\n" << body << "\n\n"
+      # convert <FOO>...</FOO> environments to plain LaTeX
+      latex.gsub!(Tag_Block) do |s|
+        tag = Regexp.last_match['tag']
+        body =  Regexp.last_match['body']
+        if tag[/^math/]
+          "$$#{body}$$"
+        else
+          ""
+        end
+      end
+      result << "\n" << latex << "\n\n"
     end
     self.children.each{|c| result << c.to_latex(level + 1)}
     result
