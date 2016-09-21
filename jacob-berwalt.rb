@@ -21,6 +21,8 @@ Sitemap_Section = /^\* +(?<section>.*)/
 Sitemap_Book    = /^== +(?<book>.*) +==/
 Sitemap_Chapter = /^=== +(?<chapter>.*) +===/
 Sitemap_Link    = /\[\[(?<link>[^|]*)\|(?<name>[^|]*)\]\]/
+Section_Delim   = /^(=+ +.* +=+)/
+Section_Subnode = /^(?<level>=+) +(?<name>.*) +\k<level>/
 
 # String constants
 Wikibook = 'Mathe für Nicht-Freaks'
@@ -50,12 +52,45 @@ class BookNode
   end
 
   def add_child(child)
-    children.push( child )
+    @children.push( child )
   end
 
   def update_content()
+    # lazy download only once
     return nil unless @link and not @body
-    # TODO
+    content = fetch(@link)
+
+    # parse the text -> array of sections with content
+    content.gsub!(/^\{\{#invoke.*\}\}$/, '')
+    subtree = []
+    content.split(Section_Delim).each do |elem|
+      if subtree.empty? and not (Section_Subnode =~ elem)
+        @body = elem
+        next
+      end
+      if Section_Subnode =~ elem
+        level = Regexp.last_match('level')
+        name  = Regexp.last_match('name')
+        name.gsub!(/\{\{.*\}\}/, '')
+        subtree.push([level.length, name])
+      else
+        subtree[-1].push(elem)
+      end
+    end
+
+    # built the tree
+    top_level = subtree[0][0]
+    subtree.each do |child|
+      current_node = self
+      level = child[0]
+      title = child[1]
+      body  = child[2]
+      while level > top_level do
+        level -= 1
+        current_node = current_node.children[-1]
+      end
+      current_node.add_child(BookNode.new(title: title, body: body))
+    end
   end
 
   def to_s()
@@ -177,38 +212,22 @@ def wikipage_to_books( item )
   fetch(item).lines.each do |line|
     if Sitemap_Section =~ line
       section = Regexp.last_match['section']
-      name, body = expand_link(section)
-      books[-1].add_section(name, body)
+      name, link = expand_link(section)
+      books[-1].add_section(title: name, link: link)
     elsif Sitemap_Book =~ line
       book = Regexp.last_match["book"]
-      name, body = expand_link(book)
+      name, link = expand_link(book)
       books.push Book.new(name, 2)
     elsif Sitemap_Chapter =~ line
       chapter = Regexp.last_match["chapter"]
-      name, body = expand_link(chapter)
-      books[-1].add_chapter(name, body)
+      name, link = expand_link(chapter)
+      books[-1].add_chapter(title: name)
     end
   end
   books
 end
 
-#books = wikipage_to_books('title=Mathe für Nicht-Freaks: Sitemap')
-# books.each { |book| book.to_tex }
-testbook = Book.new("The Testbook")
-testbook.add_chapter(title: "Chapter 1",
-                     body: "This chapter contains no sections.")
-testbook.add_chapter(title: "Chapter 2",
-                     body: "This chapter contains one section.")
-testbook.add_section(title: "Section 1",
-                     body:
-                       "{{#invoke:Mathe für Nicht-Freaks/Seite|oben}}
 
-Kommen wir nun zum Wurzelkriterium, welches ein mächtiges Kriterium ist, um die Konvergenz einer konkret gegebenen Reihe auszurechnen. Es basiert auf dem Majorantenkriterium, wobei hier die Konvergenz einer Reihe auf die Konvergenz der geometrischen Reihe <math>\\sum_{k=1}^\\infty q^k</math> mit <math>0\\le q < 1</math> zurückgeführt wird.
+books = wikipage_to_books(Wikibook + Sitemap)
 
-Das Wurzelkriterium wurde zuerst 1821 vom französischen Mathematiker [[w:Augustin Louis Cauchy|Augustin Louis Cauchy]] in seinem Lehrbuch „Cours d'analyse“ veröffentlicht<ref>Siehe [http://hsm.stackexchange.com/a/2862/1772 die Antwort auf die Frage „Where is the root test first proved“] der Q&A Webseite „History of Science and Mathematics“</ref>. Deswegen wird es auch „Wurzelkriterium von Cauchy“ genannt.")
-testbook
-print testbook.to_latex
-# puts testbook.children
-# books = wikipage_to_books(Wikibook + Sitemap)
-# books.each { |book| puts book.toc }
-
+puts books[0].children[1].children[1].children[2].children
