@@ -20,11 +20,11 @@ LaTeX_Headings = ["section",
 Sitemap_Section = /^\* +(?<section>.*)/
 Sitemap_Book    = /^== +(?<book>.*) +==/
 Sitemap_Chapter = /^=== +(?<chapter>.*) +===/
-Link    = /\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]/
-Section_Delim   = /^(=+ +.* +=+)/
-Section_Subnode = /^(?<level>=+) +(?<name>.*) +\k<level>/
-Block   = /{{(?<link>[^|]+?)\|(?<name>[^|]+?)}}/
-Math_Block = /<math>(.+?)<\/math>/
+Link            = /\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]/
+Section_Delim   = /^(=+ *.* *=+)/
+Section_Subnode = /^(?<level>=+) *(?<name>.*) +\k<level>/
+Block           = /{{(?<link>[^|]+?)\|(?<name>[^|]+?)}}/
+Math_Block      = /<math>(.+?)<\/math>/
 
 # String constants
 Wikibook = 'Mathe für Nicht-Freaks'
@@ -63,7 +63,6 @@ class BookNode
     content = fetch(@link)
 
     # parse the text -> array of sections with content
-    content.gsub!(/^\{\{#invoke.*\}\}$/, '')
     subtree = []
     content.split(Section_Delim).each do |elem|
       if subtree.empty? and not (Section_Subnode =~ elem)
