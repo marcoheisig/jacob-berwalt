@@ -153,14 +153,43 @@ class BookNode
         Regexp.last_match["b"] + '\textbf{' + Regexp.last_match["word"] + '}' + Regexp.last_match["a"]
       end
 
-      # items
-      latex.gsub!(/^ *\* /, '\item ')
-      latex.gsub!(/^(?<old>(?!\\item).*?)\\item/m) do |s|
-        Regexp.last_match["old"] + "\n\\begin{itemize}\n\\item"
+      # parse itemize/enumerate
+      item_stack = []
+      new_latex = ''
+      latex.lines.each do |line|
+          if /^ *(?<item>[\*#]+)(?<rest>.*)/ =~ line
+            if not item_stack.empty? and item.length == item_stack[-1].length
+              new_latex += '\item ' + rest + "\n"
+            elsif not item_stack.empty? and item.length <= item_stack[-1].length
+              new_latex += '\item ' + rest + "\n"
+              old_item = item_stack.pop
+              if old_item =~ /^#+$/
+                new_latex += "\\end{enumerate}\n"
+              else
+                new_latex += "\\end{itemize}\n"
+              end
+            else
+              item_stack.push item
+              if item =~ /^#+$/
+                new_latex += "\\begin{enumerate}\n"
+              else
+                new_latex += "\\begin{itemize}\n"
+              end
+              new_latex += '\item ' + rest + "\n"
+            end
+          else
+            old_item = item_stack.pop
+            if old_item
+              if old_item =~ /^#+$/
+                new_latex += "\\end{enumerate}\n"
+              else
+                new_latex += "\\end{itemize}\n"
+              end
+            end
+            new_latex += line
+          end
       end
-      latex.gsub!(/^(?<last>\\item.*?)\n(?!\\item)/m) do |s|
-        Regexp.last_match["last"] + "\n\\end{itemize}\n"
-      end
+      latex = new_latex
 
       result << "\n" << latex << "\n\n"
     end
@@ -283,4 +312,4 @@ grundlagen = books[0]
 analysis1 = books[1]
 lineare_algebra = books[2]
 
-puts lineare_algebra.to_latex
+puts analysis1.to_latex
