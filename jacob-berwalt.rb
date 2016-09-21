@@ -114,9 +114,9 @@ class BookNode
         tag = Regexp.last_match['tag']
         body =  Regexp.last_match['body']
         if what[/^Formel/]
-          result = "\\begin{align*}\n"
+          result = "\n\\begin{align*}\n"
           result << body
-          result << "\\end{align*}"
+          result << "\n\\end{align*}\n"
           return result
         end
         ""
@@ -244,7 +244,9 @@ def wikipage_to_books( item )
   books
 end
 
-
 books = wikipage_to_books(Wikibook + Sitemap)
+grundlagen = books[0]
+analysis1 = books[1]
+lineare_algebra = books[2]
 
-puts books[5].to_latex
+puts lineare_algebra.to_latex
