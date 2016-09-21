@@ -17,13 +17,13 @@ LaTeX_Headings = ["section",
                   "subparagraph"]
 
 # Regex for sitemap processing
-Sitemap_Section = /^\* +(?<section>.*)/
-Sitemap_Book    = /^== +(?<book>.*) +==/
-Sitemap_Chapter = /^=== +(?<chapter>.*) +===/
+Sitemap_Section = /^\* *(?<section>.*)/
+Sitemap_Book    = /^== *(?<book>.*) *==/
+Sitemap_Chapter = /^=== *(?<chapter>.*) *===/
 Link            = /\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]/
-Section_Delim   = /^(=+ *.* *=+)/
-Section_Subnode = /^(?<level>=+) *(?<name>.*) +\k<level>/
-Block           = /{{(?<link>[^|]+?)\|(?<name>[^|]+?)}}/
+Section_Delim   = /^(=+.*=+)/
+Section_Subnode = /^(?<level>=+) *(?<name>.*) *\k<level>/
+Block           = /{{(?<what>[^|]+?)\|<(?<tag>.+?)>(?<body>.+?)<\/\k<tag>>}}/
 Math_Block      = /<math>(.+?)<\/math>/
 
 # String constants
@@ -108,8 +108,16 @@ class BookNode
     if @body
       body = String.new(self.body)
       # deal with {{ ... | ... }} blocks
-      body.gsub!(Block) do |link, name|
-        return name.gsub(Math_Block, '\1') if link[/^Formel/]
+      body.gsub!(Block) do |s|
+        what = Regexp.last_match['what']
+        tag = Regexp.last_match['tag']
+        body =  Regexp.last_match['body']
+        if what[/^Formel/]
+          result = "\\begin{align*}\n"
+          result << body
+          result << "\\end{align*}"
+          return result
+        end
         ""
       end
       # replace links by names (TODO make them hyperref links)
@@ -238,4 +246,4 @@ end
 
 books = wikipage_to_books(Wikibook + Sitemap)
 
-puts books[0].to_latex
+puts books[2].to_latex
