@@ -145,12 +145,16 @@ class BookNode
 
       # convert '''' to \textit{}
       latex.gsub!(/(?<b>[^'])''(?<word>[^']+)''(?<a>[^'])/) do |s|
-        Regexp.last_match["b"] + '\textit{' + Regexp.last_match["word"] + '}' + Regexp.last_match["a"]
+        Regexp.last_match["b"] +
+          '\textit{' + Regexp.last_match["word"] + '}' +
+          Regexp.last_match["a"]
       end
 
       # convert '''''' to \textbf{}
       latex.gsub!(/(?<b>[^'])'''(?<word>[^']+)'''(?<a>[^'])/) do |s|
-        Regexp.last_match["b"] + '\textbf{' + Regexp.last_match["word"] + '}' + Regexp.last_match["a"]
+        Regexp.last_match["b"] +
+          '\textbf{' + Regexp.last_match["word"] + '}' +
+          Regexp.last_match["a"]
       end
 
       # parse itemize/enumerate
@@ -312,4 +316,4 @@ grundlagen = books[0]
 analysis1 = books[1]
 lineare_algebra = books[2]
 
-puts analysis1.to_latex
+puts lineare_algebra.to_latex
