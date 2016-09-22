@@ -1,2 +1,12 @@
 A simple tool to convert a subset of the Mediawiki language to beautiful
 TeX. Primarily intended for the book [[https://de.wikibooks.org/wiki/Mathe_f%C3%BCr_Nicht-Freaks][Mathe für Nicht-Freaks]].
+
+* TODO List
+** change from regex matching to real parsing
+- stack of matched opening delimiters
+- a function flip that converts e.g. '((' to '))' and '<math>' to '</math>'
+- one regex for opening mediawiki delimiters, one for HTML ones
+- a function String.to_tex( surrounding_delimiter ), e.g.
+  "foo".to_tex("<math>") => "$foo$"
+- after a match, go to the next opening or closing construct, whatever is closer
+- at a closing construct, invoke body.to_tex( stack.pop )
