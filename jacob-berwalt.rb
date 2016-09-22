@@ -26,6 +26,8 @@ Section_Subnode = /^(?<level>=+) *(?<name>.*) *\k<level>/
 Block           = /{{(?<what>[^|]+?)\|(<(?<tag>.+?)>)?(?<body>.+?)(?<tag><\/\k<tag>>)}}/m
 Tag_Block       = /<(?<tag>[^ ]+)(?<options>[^>]*)>(?<body>.+?)<\/\k<tag>>/m
 TeX_Environment = /\\begin *?{(?<env>.+?)}(?<texbody>.+)\\end *?{\k<env>}/m
+List_Blog       = /\{\{#invoke:Liste\|erzeugeListe\s+\|type=(?<type>\w+)\s+\|inline=(?<inline>\w+)\s+(?<inside>.*?)\}\}/m
+List_Item       = /\|item[\d+]=/
 
 # String constants
 Wikibook = 'Mathe für Nicht-Freaks'
@@ -200,6 +202,21 @@ class BookNode
           end
       end
       latex = new_latex
+
+      # translate mediawiki lists
+      latex.gsub!(List_Blog) do |s|
+        if Regexp.last_match["type"] == "ol"
+          "\\begin{enumerate}\n" +
+            Regexp.last_match["inside"] +
+            "\\end{enumerate}\n"
+        else
+          "\\begin{itemize}\n" +
+            Regexp.last_match["inside"] +
+            "\\end{itemize}\n"
+        end
+      end
+      latex.gsub!(List_Item) { |s| '\item' }
+
 
       result << "\n" << latex << "\n\n"
     end
