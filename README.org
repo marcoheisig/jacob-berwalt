@@ -10,3 +10,7 @@ TeX. Primarily intended for the book [[https://de.wikibooks.org/wiki/Mathe_f%C3%
   "foo".to_tex("<math>") => "$foo$"
 - after a match, go to the next opening or closing construct, whatever is closer
 - at a closing construct, invoke body.to_tex( stack.pop )
+** generic user defined blocks
+when the the String.to_tex("{{") function finds no no applicable standard
+interpretation of a block type, look up in a table of user defined parser
+methods that can handle e.g. "Mathe für Nicht-Freaks: Vorlage:Definition".
