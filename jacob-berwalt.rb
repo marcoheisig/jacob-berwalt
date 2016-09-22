@@ -116,9 +116,9 @@ class BookNode
         tag = Regexp.last_match['tag']
         body =  Regexp.last_match['body']
         if what[/^Formel/]
-          result = "\n\\begin{align*}\n"
+          result = "\n\\begin{align*}"
           result << body
-          result << "\n\\end{align*}\n"
+          result << "\\end{align*}\n"
         else
           STDERR.print "A #{what} clause has been ignored.\n"
           ""
@@ -130,7 +130,7 @@ class BookNode
         options = Regexp.last_match['options']
         body =  Regexp.last_match['body']
         if tag[/^math/]
-          "$$#{body}$$"
+          "$#{body}$"
         elsif tag[/^dfn/]
           if options[/title="(.*)"/]
             "\\emph{#{$1}}"
@@ -258,6 +258,10 @@ class Book
   def to_latex()
     result = ["\\documentclass[11pt]{article}" ]
     LaTeX_Packages.each{|p| result << "\\usepackage#{p}"}
+    result << "\\def \\N {\\mathbb{N}}"
+    result << "\\def \\R {\\mathbb{R}}"
+    result << "\\def \\Z {\\mathbb{Z}}"
+    result << "\\def \\Q {\\mathbb{Q}}"
     result << "\\title{#{self.title}}"
     result << "\\begin{document}"
     result << "\\maketitle"
