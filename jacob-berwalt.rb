@@ -9,7 +9,8 @@ LaTeX_Packages = ["[utf8]{inputenc}",
                   "{amsmath}",
                   "[usenames,dvipsnames,svgnames,table]{xcolor}",
                   "{amssymb}",
-                  "{hyperref}"]
+                  "{hyperref}",
+                  "{amsthm}"]
 
 LaTeX_Headings = ["section",
                   "subsection",
@@ -33,7 +34,7 @@ List_Item       = /\|item[\d+]=/
 Pipe_Block      = /{\| *?class *?= *?"(?<what>.*?)"(?<body>.+?)\|}/m
 Invoke_Block    = /\{\{#invoke:.*?\}\}/m
 Def_Block       = /\{\{:Mathe für Nicht-Freaks: Vorlage:Definition\s+\|titel=(?<title>[^\|]+)\s+\|definition=(?<inside>.+?)\}\}/m
-Theorem_Block   = /\{\{:Mathe für Nicht-Freaks: Vorlage:Satz\s+\|titel=(?<title>[^\|]+)\s+\|satz=(?<theorem>.+?)\|beweis=(?<proof>.+?)\}\}/m
+Theorem_Block   = /\{\{:Mathe für Nicht-Freaks: Vorlage:Satz\s+(\|titel=(?<title>[^\|]+)\s+)?\|satz=(?<theorem>.+?)(\|erklärung=(?<explanation>.+?))?\|beweis=(?<proof>.+?)\}\}/m
 
 # String constants
 Wikibook = 'Mathe für Nicht-Freaks'
@@ -50,13 +51,13 @@ class String
         env = Regexp.last_match['env']
         texbody =  Regexp.last_match['texbody']
         env = "align*" if env and env[/align/]
-        result = "\n\\begin{#{env}}"
-        result << texbody
-        result << "\\end{#{env}}\n"
+        result = "\n\\begin{#{env}}\n"
+        result << texbody.strip
+        result << "\n\\end{#{env}}\n"
       else
-        result = "\\begin{align*}"
-        result << body
-        result << "\\end{align*}"
+        result = "\\begin{align*}\n"
+        result << body.strip
+        result << "\n\\end{align*}"
       end
     end
   end
@@ -226,9 +227,12 @@ class BookNode
       # translate theorems
       latex.gsub!(Theorem_Block) do |s|
         title = Regexp.last_match["title"]
+        title = '[' + title.strip + ']' unless title == nil
+        explanation = Regexp.last_match["explanation"] or ''
         theorem = Regexp.last_match["theorem"]
         proof = Regexp.last_match["proof"]
-        "\\begin{theorem}[#{title.strip}]\n#{theorem}\n\\end{theorem}\n" +
+        "\\begin{theorem}#{title}\n#{theorem}\n\\end{theorem}\n" +
+            explanation.to_s +
           "\\begin{proof}\n#{proof}\n\\end{proof}\n"
       end
 
@@ -341,6 +345,10 @@ class Book
     result << "\\def \\Z {\\mathbb{Z}}"
     result << "\\def \\C {\\mathbb{Z}}"
     result << "\\def \\Q {\\mathbb{Q}}"
+    result << "\\theoremstyle{definition}"
+    result << "\\newtheorem{definition}{Definition}"
+    result << "\\theoremstyle{theorem}"
+    result << "\\newtheorem{theorem}{Satz}"
     result << "\\title{#{self.title}}"
     result << "\\begin{document}"
     result << "\\maketitle"
