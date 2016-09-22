@@ -28,6 +28,7 @@ Tag_Block       = /<(?<tag>[^ ]+)(?<options>[^>]*)>(?<body>.+?)<\/\k<tag>>/m
 TeX_Environment = /\\begin *?{(?<env>.+?)}(?<texbody>.+)\\end *?{\k<env>}/m
 List_Blog       = /\{\{#invoke:Liste\|erzeugeListe\s+\|type=(?<type>\w+)\s+\|inline=(?<inline>\w+)\s+(?<inside>.*?)\}\}/m
 List_Item       = /\|item[\d+]=/
+Pipe_Block      = /{\| *?class *?= *?"(?<what>.*?)"(?<body>.+?)\|}/m
 
 # String constants
 Wikibook = 'Mathe für Nicht-Freaks'
@@ -150,6 +151,29 @@ class BookNode
           ""
         end
       end
+
+	  # handle [[ ... | ... ]] links
+      latex.gsub!(Link) do |s|
+        link = Regexp.last_match['link']
+        name = Regexp.last_match['name']
+        name
+      end
+
+      # handle {| class="..." ... |} blocks
+      latex.gsub!(Link) do |s|
+        what = Regexp.last_match['what']
+        body = Regexp.last_match['body']
+        case what
+        when "wikitable"
+          "" # TODO
+        else
+          STDERR.puts "A #{what} has been ignored"
+          ""
+        end
+      end
+
+      # expand blocks like "Satz" because they may contain additional parens
+
 
       # convert '''' to \textit{}
       latex.gsub!(/(?<b>[^'])''(?<word>[^']+)''(?<a>[^'])/) do |s|
