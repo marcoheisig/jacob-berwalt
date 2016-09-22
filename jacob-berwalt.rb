@@ -29,6 +29,9 @@ TeX_Environment = /\\begin *?{(?<env>.+?)}(?<texbody>.+)\\end *?{\k<env>}/m
 List_Blog       = /\{\{#invoke:Liste\|erzeugeListe\s+\|type=(?<type>\w+)\s+\|inline=(?<inline>\w+)\s+(?<inside>.*?)\}\}/m
 List_Item       = /\|item[\d+]=/
 Pipe_Block      = /{\| *?class *?= *?"(?<what>.*?)"(?<body>.+?)\|}/m
+Invoke_Block    = /\{\{#invoke:.*?\}\}/m
+Def_Block       = /\{\{:Mathe für Nicht-Freaks: Vorlage:Definition\s+\|titel=(?<title>[^\|]+)\s+\|definition=(?<inside>.+?)\}\}/m
+Theorem_Block   = /\{\{:Mathe für Nicht-Freaks: Vorlage:Satz\s+\|titel=(?<title>[^\|]+)\s+\|satz=(?<theorem>.+?)\|beweis=(?<proof>.+?)\}\}/m
 
 # String constants
 Wikibook = 'Mathe für Nicht-Freaks'
@@ -241,6 +244,24 @@ class BookNode
       end
       latex.gsub!(List_Item) { |s| '\item' }
 
+      # remove remaining invokes
+      latex.gsub!(Invoke_Block, '')
+
+      # translate definitions
+      latex.gsub!(Def_Block) do |s|
+        title = Regexp.last_match["title"]
+        inside = Regexp.last_match["inside"]
+        "\\begin{definition}[#{title.strip}]\n#{inside}\n\\end{definition}\n"
+      end
+
+      # translate theorems
+      latex.gsub!(Theorem_Block) do |s|
+        title = Regexp.last_match["title"]
+        theorem = Regexp.last_match["theorem"]
+        proof = Regexp.last_match["proof"]
+        "\\begin{theorem}[#{title.strip}]\n#{theorem}\n\\end{theorem}\n" +
+          "\\begin{proof}\n#{proof}\n\\end{proof}\n"
+      end
 
       result << "\n" << latex << "\n\n"
     end
