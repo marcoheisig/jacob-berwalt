@@ -27,7 +27,7 @@ Section_Subnode = /^(?<level>=+) *(?<name>.*) *\k<level>/
 Block           = /{{(?<what>[^|]+?)\|(<(?<tag>.+?)>)?(?<body>.+?)(?(<tag>)<\/\k<tag>>)}}/m
 Tag_Block       = /<(?<tag>[^ ]+)(?<options>[^>]*)>(?<body>.+?)<\/\k<tag>>/m
 TeX_Environment = /\\begin *?{(?<env>.+?)}(?<texbody>.+)\\end *?{\k<env>}/m
-List_Blog       = /\{\{#invoke:Liste\|erzeugeListe\s+\|type=(?<type>\w+)\s+\|inline=(?<inline>\w+)\s+(?<inside>.*?)\}\}/m
+List_Block      = /\{\{#invoke:Liste\|erzeugeListe\s+\|type=(?<type>\w+)\s+\|inline=(?<inline>\w+)\s+(?<inside>.*)\}\}/m
 List_Item       = /\|item[\d+]=/
 Pipe_Block      = /{\| *?class *?= *?"(?<what>.*?)"(?<body>.+?)\|}/m
 Invoke_Block    = /\{\{#invoke:.*?\}\}/m
@@ -53,6 +53,7 @@ class String
           env = "align*" if env and env[/align/]
           result = "\n\\begin{#{env}}"
           result << texbody
+          STDERR.puts texbody
           result << "\\end{#{env}}\n"
         end
       else
@@ -141,25 +142,6 @@ class BookNode
       latex = String.new(self.body)
       latex.formulas_to_tex!
 
-      # convert <FOO>...</FOO> environments to plain LaTeX
-      latex.gsub!(Tag_Block) do |s|
-        tag = Regexp.last_match['tag']
-        options = Regexp.last_match['options']
-        body =  Regexp.last_match['body']
-        if tag[/^math/]
-          "$#{body}$"
-        elsif tag[/^dfn/]
-          if options[/title="(.*)"/]
-            "\\emph{#{$1}}"
-          else
-            "\\emph{#{body}}"
-          end
-        else
-          STDERR.print "A #{tag} block has been ignored.\n"
-          ""
-        end
-      end
-
       # handle [[ ... | ... ]] links
       latex.gsub!(Link) do |s|
         link = Regexp.last_match['link']
@@ -220,7 +202,7 @@ class BookNode
       latex = new_latex
 
       # translate mediawiki lists
-      latex.gsub!(List_Blog) do |s|
+      latex.gsub!(List_Block) do |s|
         if Regexp.last_match["type"] == "ol"
           "\\begin{enumerate}\n" +
             Regexp.last_match["inside"] +
@@ -262,6 +244,26 @@ class BookNode
       end
 
       latex.formulas_to_tex!
+
+      # convert <FOO>...</FOO> environments to plain LaTeX
+      latex.gsub!(Tag_Block) do |s|
+        tag = Regexp.last_match['tag']
+        options = Regexp.last_match['options']
+        body =  Regexp.last_match['body']
+        if tag[/^math/]
+          "$#{body}$"
+        elsif tag[/^dfn/]
+          if options[/title="(.*)"/]
+            "\\emph{#{$1}}"
+          else
+            "\\emph{#{body}}"
+          end
+        else
+          STDERR.print "A #{tag} block has been ignored.\n"
+          ""
+        end
+      end
+
       # delete all remaining blocks
       latex.gsub!(Block) do |s|
         what = Regexp.last_match['what']
@@ -367,7 +369,6 @@ def expand_link(item)
     return item, ''
   end
 end
-
 
 # A crude heuristic to turn a wikibooks page to several TOC (table of
 # contents) objects.
