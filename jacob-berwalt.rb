@@ -25,9 +25,10 @@ Link            = /\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]/
 Section_Delim   = /^(=+.*=+)/
 Section_Subnode = /^(?<level>=+) *(?<name>.*) *\k<level>/
 Block           = /{{(?<what>[^|]+?)\|(<(?<tag>.+?)>)?(?<body>.+?)(?(<tag>)<\/\k<tag>>)}}/m
+Formel          = /{{ *?Formel *?\|(<(?<tag>.+?)>)?(?<body>.+?)(?(<tag>)<\/\k<tag>>)}}/m
 Tag_Block       = /<(?<tag>[^ ]+)(?<options>[^>]*)>(?<body>.+?)<\/\k<tag>>/m
 TeX_Environment = /\\begin *?{(?<env>.+?)}(?<texbody>.+)\\end *?{\k<env>}/m
-List_Block      = /\{\{#invoke:Liste\|erzeugeListe\s+\|type=(?<type>\w+)\s+\|inline=(?<inline>\w+)\s+(?<inside>.*)\}\}/m
+List_Block      = /{{#invoke:Liste\|erzeugeListe\s+\|type=(?<type>\w+)\s+\|inline=(?<inline>\w+)\s+(?<inside>.*)}}/m
 List_Item       = /\|item[\d+]=/
 Pipe_Block      = /{\| *?class *?= *?"(?<what>.*?)"(?<body>.+?)\|}/m
 Invoke_Block    = /\{\{#invoke:.*?\}\}/m
@@ -42,22 +43,20 @@ Base_Url = 'https://de.wikibooks.org/w/index.php'
 class String
   def formulas_to_tex!()
     # deal with {{ ... | ... }} blocks
-    self.gsub!(Block) do |match|
-      what = Regexp.last_match['what']
+    self.gsub!(Formel) do |match|
       tag = Regexp.last_match['tag']
       body =  Regexp.last_match['body']
-      if what[/^Formel/]
-        if TeX_Environment =~ body
-          env = Regexp.last_match['env']
-          texbody =  Regexp.last_match['texbody']
-          env = "align*" if env and env[/align/]
-          result = "\n\\begin{#{env}}"
-          result << texbody
-          STDERR.puts texbody
-          result << "\\end{#{env}}\n"
-        end
+      if TeX_Environment =~ body
+        env = Regexp.last_match['env']
+        texbody =  Regexp.last_match['texbody']
+        env = "align*" if env and env[/align/]
+        result = "\n\\begin{#{env}}"
+        result << texbody
+        result << "\\end{#{env}}\n"
       else
-        match
+        result = "\\begin{align*}"
+        result << body
+        result << "\\end{align*}"
       end
     end
   end
@@ -140,7 +139,10 @@ class BookNode
     result = "\n\\#{LaTeX_Headings[level]}{#{@title}}\n"
     if @body
       latex = String.new(self.body)
+
       latex.formulas_to_tex!
+      STDERR.puts "\nBEFORE\n", latex
+
 
       # handle [[ ... | ... ]] links
       latex.gsub!(Link) do |s|
@@ -203,14 +205,13 @@ class BookNode
 
       # translate mediawiki lists
       latex.gsub!(List_Block) do |s|
-        if Regexp.last_match["type"] == "ol"
-          "\\begin{enumerate}\n" +
-            Regexp.last_match["inside"] +
-            "\\end{enumerate}\n"
+        type = Regexp.last_match["type"]
+        inside = Regexp.last_match["inside"]
+        STDERR.puts inside
+        if type == "ol"
+          "\\begin{enumerate}\n" + inside + "\\end{enumerate}\n"
         else
-          "\\begin{itemize}\n" +
-            Regexp.last_match["inside"] +
-            "\\end{itemize}\n"
+          "\\begin{itemize}\n" + inside + "\\end{itemize}\n"
         end
       end
       latex.gsub!(List_Item) { |s| '\item' }
