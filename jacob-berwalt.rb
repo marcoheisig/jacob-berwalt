@@ -7,6 +7,7 @@ require "net/http"
 LaTeX_Packages = ["[utf8]{inputenc}",
                   "[T1]{fontenc}",
                   "{amsmath}",
+                  "[usenames,dvipsnames,svgnames,table]{xcolor}",
                   "{amssymb}",
                   "{hyperref}"]
 
@@ -23,7 +24,7 @@ Sitemap_Chapter = /^===(?<chapter>[^=]+)=== *$/
 Link            = /\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]/
 Section_Delim   = /^(=+.*=+)/
 Section_Subnode = /^(?<level>=+) *(?<name>.*) *\k<level>/
-Block           = /{{(?<what>[^|]+?)\|(<(?<tag>.+?)>)?(?<body>.+?)(?<tag><\/\k<tag>>)}}/m
+Block           = /{{(?<what>[^|]+?)\|(<(?<tag>.+?)>)?(?<body>.+?)(?(<tag>)<\/\k<tag>>)}}/m
 Tag_Block       = /<(?<tag>[^ ]+)(?<options>[^>]*)>(?<body>.+?)<\/\k<tag>>/m
 TeX_Environment = /\\begin *?{(?<env>.+?)}(?<texbody>.+)\\end *?{\k<env>}/m
 List_Blog       = /\{\{#invoke:Liste\|erzeugeListe\s+\|type=(?<type>\w+)\s+\|inline=(?<inline>\w+)\s+(?<inside>.*?)\}\}/m
@@ -37,6 +38,29 @@ Theorem_Block   = /\{\{:Mathe für Nicht-Freaks: Vorlage:Satz\s+\|titel=(?<title
 Wikibook = 'Mathe für Nicht-Freaks'
 Sitemap  = ': Sitemap'
 Base_Url = 'https://de.wikibooks.org/w/index.php'
+
+class String
+  def formulas_to_tex!()
+    # deal with {{ ... | ... }} blocks
+    self.gsub!(Block) do |match|
+      what = Regexp.last_match['what']
+      tag = Regexp.last_match['tag']
+      body =  Regexp.last_match['body']
+      if what[/^Formel/]
+        if TeX_Environment =~ body
+          env = Regexp.last_match['env']
+          texbody =  Regexp.last_match['texbody']
+          env = "align*" if env and env[/align/]
+          result = "\n\\begin{#{env}}"
+          result << texbody
+          result << "\\end{#{env}}\n"
+        end
+      else
+        match
+      end
+    end
+  end
+end
 
 class BookNode
   def initialize(title: "", body: nil, link: nil)
@@ -115,27 +139,8 @@ class BookNode
     result = "\n\\#{LaTeX_Headings[level]}{#{@title}}\n"
     if @body
       latex = String.new(self.body)
-      # first expand blocks like "Satz" because they may contain additional parens
+      latex.formulas_to_tex!
 
-      # deal with {{ ... | ... }} blocks
-      latex.gsub!(Block) do |s|
-        what = Regexp.last_match['what']
-        tag = Regexp.last_match['tag']
-        body =  Regexp.last_match['body']
-        if what[/^Formel/]
-          if TeX_Environment =~ body
-            env = Regexp.last_match['env']
-            texbody =  Regexp.last_match['texbody']
-            env = "align*" if env and env[/align/]
-            result = "\n\\begin{#{env}}"
-            result << texbody
-            result << "\\end{#{env}}\n"
-          end
-        else
-          STDERR.print "A #{what} clause has been ignored.\n"
-          ""
-        end
-      end
       # convert <FOO>...</FOO> environments to plain LaTeX
       latex.gsub!(Tag_Block) do |s|
         tag = Regexp.last_match['tag']
@@ -155,28 +160,12 @@ class BookNode
         end
       end
 
-	  # handle [[ ... | ... ]] links
+      # handle [[ ... | ... ]] links
       latex.gsub!(Link) do |s|
         link = Regexp.last_match['link']
         name = Regexp.last_match['name']
         name
       end
-
-      # handle {| class="..." ... |} blocks
-      latex.gsub!(Link) do |s|
-        what = Regexp.last_match['what']
-        body = Regexp.last_match['body']
-        case what
-        when "wikitable"
-          "" # TODO
-        else
-          STDERR.puts "A #{what} has been ignored"
-          ""
-        end
-      end
-
-      # expand blocks like "Satz" because they may contain additional parens
-
 
       # convert '''' to \textit{}
       latex.gsub!(/(?<b>[^'])''(?<word>[^']+)''(?<a>[^'])/) do |s|
@@ -196,37 +185,37 @@ class BookNode
       item_stack = []
       new_latex = ''
       latex.lines.each do |line|
-          if /^ *(?<item>[\*#]+)(?<rest>.*)/ =~ line
-            if not item_stack.empty? and item.length == item_stack[-1].length
-              new_latex += '\item ' + rest + "\n"
-            elsif not item_stack.empty? and item.length <= item_stack[-1].length
-              new_latex += '\item ' + rest + "\n"
-              old_item = item_stack.pop
-              if old_item =~ /^#+$/
-                new_latex += "\\end{enumerate}\n"
-              else
-                new_latex += "\\end{itemize}\n"
-              end
+        if /^ *(?<item>[\*#]+)(?<rest>.*)/ =~ line
+          if not item_stack.empty? and item.length == item_stack[-1].length
+            new_latex += '\item ' + rest + "\n"
+          elsif not item_stack.empty? and item.length <= item_stack[-1].length
+            new_latex += '\item ' + rest + "\n"
+            old_item = item_stack.pop
+            if old_item =~ /^#+$/
+              new_latex += "\\end{enumerate}\n"
             else
-              item_stack.push item
-              if item =~ /^#+$/
-                new_latex += "\\begin{enumerate}\n"
-              else
-                new_latex += "\\begin{itemize}\n"
-              end
-              new_latex += '\item ' + rest + "\n"
+              new_latex += "\\end{itemize}\n"
             end
           else
-            old_item = item_stack.pop
-            if old_item
-              if old_item =~ /^#+$/
-                new_latex += "\\end{enumerate}\n"
-              else
-                new_latex += "\\end{itemize}\n"
-              end
+            item_stack.push item
+            if item =~ /^#+$/
+              new_latex += "\\begin{enumerate}\n"
+            else
+              new_latex += "\\begin{itemize}\n"
             end
-            new_latex += line
+            new_latex += '\item ' + rest + "\n"
           end
+        else
+          old_item = item_stack.pop
+          if old_item
+            if old_item =~ /^#+$/
+              new_latex += "\\end{enumerate}\n"
+            else
+              new_latex += "\\end{itemize}\n"
+            end
+          end
+          new_latex += line
+        end
       end
       latex = new_latex
 
@@ -244,9 +233,6 @@ class BookNode
       end
       latex.gsub!(List_Item) { |s| '\item' }
 
-      # remove remaining invokes
-      latex.gsub!(Invoke_Block, '')
-
       # translate definitions
       latex.gsub!(Def_Block) do |s|
         title = Regexp.last_match["title"]
@@ -261,6 +247,27 @@ class BookNode
         proof = Regexp.last_match["proof"]
         "\\begin{theorem}[#{title.strip}]\n#{theorem}\n\\end{theorem}\n" +
           "\\begin{proof}\n#{proof}\n\\end{proof}\n"
+      end
+
+      # handle {| class="..." ... |} blocks
+      latex.gsub!(Pipe_Block) do |s|
+        what = Regexp.last_match['what']
+        body = Regexp.last_match['body']
+        case what
+        when "wikitable"
+          "" # TODO
+        else
+          s
+        end
+      end
+
+      latex.formulas_to_tex!
+      # delete all remaining blocks
+      latex.gsub!(Block) do |s|
+        what = Regexp.last_match['what']
+        tag = Regexp.last_match['tag']
+        body =  Regexp.last_match['body']
+        STDERR.print "A #{what.strip} clause has been ignored.\n"
       end
 
       result << "\n" << latex << "\n\n"
@@ -329,6 +336,7 @@ class Book
     result << "\\def \\N {\\mathbb{N}}"
     result << "\\def \\R {\\mathbb{R}}"
     result << "\\def \\Z {\\mathbb{Z}}"
+    result << "\\def \\C {\\mathbb{Z}}"
     result << "\\def \\Q {\\mathbb{Q}}"
     result << "\\title{#{self.title}}"
     result << "\\begin{document}"
