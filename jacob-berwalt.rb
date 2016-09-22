@@ -142,7 +142,6 @@ class BookNode
       latex = String.new(self.body)
 
       latex.formulas_to_tex!
-      STDERR.puts "\nBEFORE\n", latex
 
 
       # handle [[ ... | ... ]] links
@@ -208,7 +207,6 @@ class BookNode
       latex.gsub!(List_Block) do |s|
         type = Regexp.last_match["type"]
         inside = Regexp.last_match["inside"]
-        STDERR.puts inside
         if type == "ol"
           "\\begin{enumerate}\n" + inside + "\\end{enumerate}\n"
         else
