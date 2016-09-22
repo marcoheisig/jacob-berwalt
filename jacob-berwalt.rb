@@ -25,6 +25,7 @@ Section_Delim   = /^(=+.*=+)/
 Section_Subnode = /^(?<level>=+) *(?<name>.*) *\k<level>/
 Block           = /{{(?<what>[^|]+?)\|(<(?<tag>.+?)>)?(?<body>.+?)(?<tag><\/\k<tag>>)}}/m
 Tag_Block       = /<(?<tag>[^ ]+)(?<options>[^>]*)>(?<body>.+?)<\/\k<tag>>/m
+TeX_Environment = /\\begin *?{(?<env>.+?)}(?<texbody>.+)\\end *?{\k<env>}/m
 
 # String constants
 Wikibook = 'Mathe für Nicht-Freaks'
@@ -116,9 +117,14 @@ class BookNode
         tag = Regexp.last_match['tag']
         body =  Regexp.last_match['body']
         if what[/^Formel/]
-          result = "\n\\begin{align*}"
-          result << body
-          result << "\\end{align*}\n"
+          if TeX_Environment =~ body
+            env = Regexp.last_match['env']
+            texbody =  Regexp.last_match['texbody']
+            env = "align*" if env and env[/align/]
+            result = "\n\\begin{#{env}}"
+            result << texbody
+            result << "\\end{#{env}}\n"
+          end
         else
           STDERR.print "A #{what} clause has been ignored.\n"
           ""
