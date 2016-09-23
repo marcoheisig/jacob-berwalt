@@ -1,8 +1,18 @@
-A simple tool to convert a subset of the Mediawiki language to beautiful
-TeX. Primarily intended for the book [[https://de.wikibooks.org/wiki/Mathe_f%C3%BCr_Nicht-Freaks][Mathe für Nicht-Freaks]].
+#+TITLE: jacob-berwalt
 
-* TODO List
-** change from regex matching to real parsing
+A simple tool to convert MediaWiki articles and books to beautiful
+TeX. Originally written to typeset the wiki book [[https://de.wikibooks.org/wiki/Mathe_f%C3%BCr_Nicht-Freaks][Mathe für Nicht-Freaks]].
+
+For those curious about the name of the project, Jacob Berwalt was a
+printer in the 16th century. He printed the first edition of Adam Riese's
+famous German book on arithmetic "Rechenung nach der lenge, auff den
+Linihen vnd Feder". This book had such a big impact on the the German
+language and mathematics, that 'nach Adam Riese' is still a common phrase
+to express the use of simple arithmetic. We think that not only authors
+deserve credit, but also editors and printers.
+
+** The TODO list
+*** change from regex matching to real parsing
 - stack of matched opening delimiters
 - a function flip that converts e.g. '((' to '))' and '<math>' to '</math>'
 - one regex for opening mediawiki delimiters, one for HTML ones
@@ -10,7 +20,21 @@ TeX. Primarily intended for the book [[https://de.wikibooks.org/wiki/Mathe_f%C3%
   "foo".to_tex("<math>") => "$foo$"
 - after a match, go to the next opening or closing construct, whatever is closer
 - at a closing construct, invoke body.to_tex( stack.pop )
-** generic user defined blocks
+*** generic user defined blocks
 when the the String.to_tex("{{") function finds no no applicable standard
 interpretation of a block type, look up in a table of user defined parser
 methods that can handle e.g. "Mathe für Nicht-Freaks: Vorlage:Definition".
+*** multiple files
+One file for the book class in general, one file for the to_tex methods and
+the file jacob-berwalt.rb for the main program
+*** command line interface
+something like
+#+BEGIN_SRC sh
+./jacob-berwalt URL ROOT
+#+END_SRC
+where =URL= points to some MediaWiki page and =ROOT= is the name of the
+topmost headline to export.
+#+BEGIN_SRC sh
+./jacob-berwalt "https://de.wikibooks.org/wiki/Mathe_für_Nicht-Freaks" "Analysis 1"
+#+END_SRC
+
