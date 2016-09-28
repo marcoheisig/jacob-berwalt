@@ -32,7 +32,7 @@ class BookNode
   end
 
   def add_child(child)
-    @children.push( child )
+    @children.push(child)
   end
 
   def update_content()
@@ -53,7 +53,7 @@ class BookNode
         name.gsub!(/\{\{.*\}\}/, '')
         subtree.push([level.length, name])
       else
-        subtree[-1].push(elem)
+          subtree.last.push(elem)
       end
     end
 
@@ -62,12 +62,10 @@ class BookNode
     top_level = subtree[0][0]
     subtree.each do |child|
       current_node = self
-      level = child[0]
-      title = child[1]
-      body  = child[2]
+      level, title, body = child
       while level > top_level do
         level -= 1
-        current_node = current_node.children[-1]
+        current_node = current_node.children.last
       end
       puts @title unless current_node
       current_node.add_child(BookNode.new(title: title, body: body))
@@ -91,10 +89,10 @@ class Book
 
   def add_node(level, **rest)
     tree = @tree
-    for _ in 1..level do
+    1..level.times do
       tree = tree.children.last
     end
-    tree.add_child( BookNode.new(**rest) )
+    tree.add_child(BookNode.new(**rest))
     self
   end
 
@@ -127,7 +125,7 @@ class Book
       tocnum.push(1)
       tree.children.each { |child|
         tocgen.call(child)
-        tocnum[-1] += 1
+        tocnum.last += 1
       }
       tocnum.pop()
     }
@@ -156,13 +154,13 @@ end
 
 # A crude heuristic to turn a wikibooks page to several TOC (table of
 # contents) objects.
-def wikipage_to_books( item )
+def wikipage_to_books(item)
   books = []
   fetch(item).lines.each do |line|
     if Sitemap_Section =~ line
       section = Regexp.last_match['section']
       name, link = expand_link(section)
-      books[-1].add_section(title: name, link: link)
+      books.last.add_section(title: name, link: link)
     elsif Sitemap_Book =~ line
       book = Regexp.last_match["book"]
       name, link = expand_link(book)
@@ -170,7 +168,7 @@ def wikipage_to_books( item )
     elsif Sitemap_Chapter =~ line
       chapter = Regexp.last_match["chapter"]
       name, link = expand_link(chapter)
-      books[-1].add_chapter(title: name)
+      books.last.add_chapter(title: name)
     end
   end
   books

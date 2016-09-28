@@ -65,15 +65,15 @@ class BookNode
       # convert '''' to \textit{}
       latex.gsub!(/(?<b>[^'])''(?<word>[^']+)''(?<a>[^'])/) do |s|
         Regexp.last_match["b"] +
-        '\textit{' + Regexp.last_match["word"] + '}' +
-        Regexp.last_match["a"]
+          '\textit{' + Regexp.last_match["word"] + '}' +
+          Regexp.last_match["a"]
       end
 
       # convert '''''' to \textbf{}
       latex.gsub!(/(?<b>[^'])'''(?<word>[^']+)'''(?<a>[^'])/) do |s|
         Regexp.last_match["b"] +
-        '\textbf{' + Regexp.last_match["word"] + '}' +
-        Regexp.last_match["a"]
+          '\textbf{' + Regexp.last_match["word"] + '}' +
+          Regexp.last_match["a"]
       end
 
       # parse itemize/enumerate
@@ -81,9 +81,9 @@ class BookNode
       new_latex = ''
       latex.lines.each do |line|
         if /^ *(?<item>[\*#]+)(?<rest>.*)/ =~ line
-          if not item_stack.empty? and item.length == item_stack[-1].length
+          if not item_stack.empty? and item.length == item_stack.last.length
             new_latex += '\item ' + rest + "\n"
-          elsif not item_stack.empty? and item.length <= item_stack[-1].length
+          elsif not item_stack.empty? and item.length <= item_stack.last.length
             new_latex += '\item ' + rest + "\n"
             old_item = item_stack.pop
             if old_item =~ /^#+$/
@@ -136,7 +136,7 @@ class BookNode
       # translate theorems
       latex.gsub!(Theorem_Block) do |s|
         title = Regexp.last_match["title"]
-        title = '[' + title.strip + ']' unless title == nil
+        title = '[' + title.strip + ']' unless title.nil?
         explanation = Regexp.last_match["explanation"] or ''
         theorem = Regexp.last_match["theorem"]
         proof = Regexp.last_match["proof"]
@@ -188,7 +188,7 @@ class BookNode
 
       result << "\n" << latex << "\n\n"
     end
-    self.children.each{|c| result << c.to_latex(level + 1)}
+    self.children.each{ |c| result << c.to_latex(level + 1)}
     result
   end
 end
