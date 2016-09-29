@@ -1,3 +1,8 @@
+# coding: utf-8
+
+# this file contains functions to convert Book objects and string
+# containting MediaWiki markup to TeX
+
 LaTeX_Packages = ["[utf8]{inputenc}",
                   "[T1]{fontenc}",
                   "{amsmath}",
@@ -48,7 +53,7 @@ class String
 end
 
 class BookNode
-  def to_latex(level = 0)
+  def to_tex(level = 0)
     result = "\n\\#{LaTeX_Headings[level]}{#{@title}}\n"
     if @body
       latex = String.new(self.body)
@@ -188,13 +193,13 @@ class BookNode
 
       result << "\n" << latex << "\n\n"
     end
-    self.children.each{ |c| result << c.to_latex(level + 1)}
+    self.children.each{ |c| result << c.to_tex(level + 1)}
     result
   end
 end
 
 class Book
-  def to_latex()
+  def to_tex()
     result = ["\\documentclass[11pt]{article}" ]
     LaTeX_Packages.each{|p| result << "\\usepackage#{p}"}
     result << "\\def \\N {\\mathbb{N}}"
@@ -213,7 +218,7 @@ class Book
     result << "\\tableofcontents"
     result << "\\newpage"
 
-    self.children.each{|c| result << c.to_latex}
+    self.children.each{|c| result << c.to_tex}
     result << "\\end{document}"
     result.join("\n")
   end
