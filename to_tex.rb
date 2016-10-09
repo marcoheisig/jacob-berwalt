@@ -198,7 +198,7 @@ class BookNode
   end
 end
 
-class Book
+class WikiBook
   def to_tex()
     result = ["\\documentclass[11pt]{article}" ]
     LaTeX_Packages.each{|p| result << "\\usepackage#{p}"}
