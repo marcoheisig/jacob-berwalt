@@ -12,13 +12,19 @@
 class WikiBook
   attr_reader :title
 
-  def initialize(title, base_url, tocdepth = 2)
+  def initialize(title: "", base_url: "", tocdepth: 2, tree: nil)
     @tocdepth = tocdepth
-    @tree = BookNode.new(title: title, link: base_url)
+    @tree = tree.nil? ? BookNode.new(title: title, link: base_url) : tree
   end
 
   def children()
     @tree.children
+  end
+
+  def subsection(path)
+    # TODO add a custom exception and a way to handle it
+    raise StandardError unless path.shift.to_s == @tree.title
+    @tree.subsection(path)
   end
 
   def to_s()
@@ -30,7 +36,7 @@ class WikiBook
     tocnum = []
 
     tocgen = lambda { |tree|
-      lines.push tocnum.join(".").ljust(5) + " "  + tree.title
+      lines.push tocnum.join(".").ljust(8) + " "  + tree.title
       tocnum.push(1)
       tree.children.each { |child|
         tocgen.call(child)
@@ -92,6 +98,17 @@ class BookNode
 
   def add_child(child)
     @children.push(child)
+  end
+
+  def subsection(path)
+    return WikiBook.new(tree: self) if path.empty?
+    children.each do |child|
+      if path.first == child.title
+        return child.subsection(path.slice(1, path.length))
+      end
+    end
+    # TODO add a custom exception and a way to handle it
+    raise StandardError
   end
 
   def expandable?
