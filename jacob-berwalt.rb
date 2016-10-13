@@ -10,8 +10,20 @@ require_relative "to_tex"
 Wikibook = 'Mathe für Nicht-Freaks'
 Sitemap  = ': Sitemap'
 
-grundlagen, analysis, lag, *_ = wikipage_to_books(Wikibook + Sitemap)
+mfnf = WikiBook.new(title: Wikibook, base_url: Wikibook + Sitemap)
 
 # puts lag.to_tex
 
 puts ["<foo>", "if", "(|", "{{[[((<<"].collect{|s| s.flip}
+
+# test of new crawler
+def print_tree(tree, depth = 0)
+  depth.times { print "  " }
+  print tree, "\n"
+  depth += 1
+  tree.children.each { |subtree| print_tree(subtree, depth + 1) }
+end
+
+# print_tree(mfnf)
+puts mfnf.subsection(["Mathe für Nicht-Freaks", "Analysis 1", "Reihen"])
+#puts mfnf

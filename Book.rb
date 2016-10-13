@@ -9,35 +9,22 @@
 # the loading and parsing of the specified URL, which may add body text and
 # several new children.
 
-class Book
-  def initialize(title, tocdepth = 2)
-    @tocdepth = tocdepth
-    @tree = BookNode.new(title: title)
-  end
+class WikiBook
+  attr_reader :title
 
-  def title()
-    @tree.title()
+  def initialize(title: "", base_url: "", tocdepth: 2, tree: nil)
+    @tocdepth = tocdepth
+    @tree = tree.nil? ? BookNode.new(title: title, link: base_url) : tree
   end
 
   def children()
     @tree.children
   end
 
-  def add_chapter(**rest)
-    self.add_node(0, **rest)
-  end
-
-  def add_section(**rest)
-    self.add_node(1, **rest)
-  end
-
-  def add_node(level, **rest)
-    tree = @tree
-    1..level.times do
-      tree = tree.children.last
-    end
-    tree.add_child(BookNode.new(**rest))
-    self
+  def subsection(path)
+    # TODO add a custom exception and a way to handle it
+    raise StandardError unless path.shift.to_s == @tree.title
+    @tree.subsection(path)
   end
 
   def to_s()
@@ -49,11 +36,11 @@ class Book
     tocnum = []
 
     tocgen = lambda { |tree|
-      lines.push tocnum.join(".").ljust(5) + " "  + tree.title
+      lines.push tocnum.join(".").ljust(8) + " "  + tree.title
       tocnum.push(1)
       tree.children.each { |child|
         tocgen.call(child)
-        tocnum.last += 1
+        tocnum[-1] += 1
       }
       tocnum.pop()
     }
@@ -65,12 +52,6 @@ end
 
 # String constants
 Base_Url = 'https://de.wikibooks.org/w/index.php'
-
-# Regex for sitemap processing
-Sitemap_Section = /^\*(?<section>.+)$/
-Sitemap_Book    = /^==(?<book>[^=]+)== *$/
-Sitemap_Chapter = /^===(?<chapter>[^=]+)=== *$/
-Link            = /\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]/
 
 class String
   def flip
@@ -90,15 +71,19 @@ class String
 end
 
 class BookNode
+  # Regex for sitemap processing
+  Hierarchy_Upper = /^ *(?<level>=+)(?<name>.+)\k<level> *$/
+  Hierarchy_Lower = /^\* +\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]/
+  Heading         = /^ *(=+.+=+) *$/
+  Hyperlink       = /\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]/
+
+  attr_reader :title
+
   def initialize(title: "", body: nil, link: nil)
     @title = title
     @body = body
     @link = link
     @children = []
-  end
-
-  def title()
-    @title
   end
 
   def body()
@@ -115,40 +100,90 @@ class BookNode
     @children.push(child)
   end
 
-  def update_content()
-    # lazy download only once
-    return nil unless @link and not @body
-    content = fetch(@link)
-
-    # parse the text -> array of sections with content
-    subtree = []
-    content.split(Section_Delim).each do |elem|
-      if subtree.empty? and not (Section_Subnode =~ elem)
-        @body = elem
-        next
-      end
-      if Section_Subnode =~ elem
-        level = Regexp.last_match('level')
-        name  = Regexp.last_match('name')
-        name.gsub!(/\{\{.*\}\}/, '')
-        subtree.push([level.length, name])
-      else
-          subtree.last.push(elem)
+  def subsection(path)
+    return WikiBook.new(tree: self) if path.empty?
+    children.each do |child|
+      if path.first == child.title
+        return child.subsection(path.slice(1, path.length))
       end
     end
+    # TODO add a custom exception and a way to handle it
+    raise StandardError
+  end
 
-    # built the tree
-    return if subtree.empty?
-    top_level = subtree[0][0]
-    subtree.each do |child|
-      current_node = self
-      level, title, body = child
-      while level > top_level do
-        level -= 1
-        current_node = current_node.children.last
+  def expandable?
+    @body.nil? and not @link.nil?
+  end
+
+  def splittable?
+    not @body.nil? and @link.nil? and @body.lines.reduce(true) do |accu, line|
+      accu and (line.strip == "" or Hierarchy_Lower =~ line or line[0] == ":")
+    end
+  end
+
+  def decomposable?
+    not @body.nil? and @link.nil? and @body.lines.reduce(false) do |accu, line|
+      accu or (Hierarchy_Upper =~ line)
+    end
+  end
+
+  def update_content()
+    # TODO this site is broken, but it's in "Buchanfänge"
+    return if @title == "Der dreidimensionale euklidische Koordinatenraum"
+    # TODO avoid endless recursion
+    return if @title == "Sitemap: Übersicht aller Kapitel"
+
+    if expandable?
+      @body = fetch(@link)
+      @link = nil
+    end
+
+    if splittable?
+      @body.lines.each do |line|
+        next unless Hierarchy_Lower =~ line
+        link = Regexp.last_match("link")
+        name = Regexp.last_match("name")
+        add_child(BookNode.new(title: name, link: link))
       end
-      puts @title unless current_node
-      current_node.add_child(BookNode.new(title: title, body: body))
+      @body = ""
+    elsif decomposable?
+      # get highest hierarchy of headings
+      headings = @body.lines.select { |line| Hierarchy_Upper =~ line }
+      hierarchies = headings.map do |heading|
+        0 if not (Hierarchy_Upper =~ heading)
+        Regexp.last_match("level").length
+      end
+      top_level = hierarchies.min
+      raise StandardError if top_level == 0
+
+      # split text according to headings of that hierarchy
+      new_body = ""
+      subtree  = []
+      @body.split(Heading).each do |elem|
+        if subtree.empty? and not (Hierarchy_Upper =~ elem)
+          new_body = elem
+          next
+        end
+        if Hierarchy_Upper =~ elem
+          level = Regexp.last_match("level")
+          if level.length != top_level
+            subtree.last.last.concat(elem)
+            next
+          end
+          name = Regexp.last_match("name")
+          subtree.push([name, ""])
+        else
+          subtree.last.last.concat(elem)
+        end
+      end
+
+      # add the chunks as children and update the body
+      @body = new_body
+      subtree.each do |child|
+        name, contents = child
+        add_child(BookNode.new(title: strip_hyperlink(name.strip),
+                               body: contents))
+      end
     end
   end
 
@@ -164,39 +199,11 @@ end
 def fetch(item)
   base = Base_Url
   what = URI.escape(item, /[^a-zA-Z\d\-._~!$&\'()*+,;=:@\/]/)
-  url = URI( base + '?title=' + what + '&action=raw' )
-  Net::HTTP.get( url ).force_encoding("UTF-8")
+  url = URI(base + '?title=' + what + '&action=raw')
+  Net::HTTP.get(url).force_encoding("UTF-8")
 end
 
-def expand_link(item)
-  if Link =~ item
-    link = Regexp.last_match['link']
-    name = Regexp.last_match['name']
-    return name, link
-  else
-    return item, ''
-  end
-end
-
-# A crude heuristic to turn a wikibooks page to several TOC (table of
-# contents) objects.
-def wikipage_to_books(item)
-  books = []
-  fetch(item).lines.each do |line|
-    if Sitemap_Section =~ line
-      section = Regexp.last_match['section']
-      name, link = expand_link(section)
-      books.last.add_section(title: name, link: link)
-    elsif Sitemap_Book =~ line
-      book = Regexp.last_match["book"]
-      name, link = expand_link(book)
-      books.push Book.new(name, 2)
-    elsif Sitemap_Chapter =~ line
-      chapter = Regexp.last_match["chapter"]
-      name, link = expand_link(chapter)
-      books.last.add_chapter(title: name)
-    end
-  end
-  books
+def strip_hyperlink(item)
+  BookNode::Hyperlink =~ item ? Regexp.last_match["name"] : item
 end
 
