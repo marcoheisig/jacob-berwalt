@@ -3,7 +3,7 @@
 
 require "open-uri"
 require "net/http"
-require_relative "Book"
+require_relative "WikiBook"
 require_relative "to_tex"
 
 

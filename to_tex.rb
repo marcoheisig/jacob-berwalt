@@ -1,6 +1,6 @@
 # coding: utf-8
 
-# this file contains functions to convert Book objects and string
+# this file contains functions to convert WikiBook objects and string
 # containting MediaWiki markup to TeX
 
 LaTeX_Packages = ["[utf8]{inputenc}",
