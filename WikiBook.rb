@@ -28,7 +28,7 @@ class WikiBook
   end
 
   def to_s()
-    self.toc
+    @tree.to_s
   end
 
   def toc()
@@ -188,6 +188,7 @@ class BookNode
   end
 
   def to_s()
+    update_content
     result = "#<BookNode"
     result << " title: " + @title if @title
     result << " link: " + @link if @link
