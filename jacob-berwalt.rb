@@ -6,24 +6,11 @@ require "net/http"
 require_relative "WikiBook"
 require_relative "to_tex"
 
-
-Wikibook = 'Mathe für Nicht-Freaks'
-Sitemap  = ': Sitemap'
-
-mfnf = WikiBook.new(title: Wikibook, base_url: Wikibook + Sitemap)
-
-# puts lag.to_tex
-
+# Test tag flipping
 puts ["<foo>", "if", "(|", "{{[[((<<"].collect{|s| s.flip}
 
-# test of new crawler
-def print_tree(tree, depth = 0)
-  depth.times { print "  " }
-  print tree, "\n"
-  depth += 1
-  tree.children.each { |subtree| print_tree(subtree, depth + 1) }
-end
+# Download the book description
+book = WikiBook.new(title: ARGV.first, base_url: ARGV.first)
 
-# print_tree(mfnf)
-puts mfnf.subsection(["Mathe für Nicht-Freaks", "Analysis 1", "Reihen"])
-#puts mfnf
+# Until the translation is finished, we just print the TOC
+puts book.subsection(ARGV).toc
