@@ -14,7 +14,7 @@ class WikiBook
 
   def initialize(title: "", base_url: "", tocdepth: 2, tree: nil)
     @tocdepth = tocdepth
-    @tree = tree.nil? ? BookNode.new(title: title, link: base_url) : tree
+    @tree = tree.nil? ? BookNode.new(title: title, content: base_url) : tree
   end
 
   def children()
@@ -75,20 +75,20 @@ class BookNode
   Hierarchy_Upper = /^ *(?<level>=+)(?<name>.+)\k<level> *$/
   Hierarchy_Lower = /^\* +\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]/
   Heading         = /^ *(=+.+=+) *$/
-  Hyperlink       = /\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]/
+  Hyperlink       = /\A\[\[(?<link>[^|]+?)\|(?<name>[^|]+?)\]\]\Z/
 
   attr_reader :title
 
-  def initialize(title: "", body: nil, link: nil)
+  def initialize(title: "", content: "")
     @title = title
-    @body = body
-    @link = link
+    @content = content
     @children = []
+    @expanded = false
   end
 
-  def body()
+  def content()
     update_content
-    @body
+    @content
   end
 
   def children()
@@ -111,44 +111,48 @@ class BookNode
     raise StandardError
   end
 
-  def expandable?
-    @body.nil? and not @link.nil?
-  end
-
   def splittable?
-    not @body.nil? and @link.nil? and @body.lines.reduce(true) do |accu, line|
+    @content.lines.reduce(true) do |accu, line|
+      # TODO this is half-ass because of sitemap comments starting with `:`
       accu and (line.strip == "" or Hierarchy_Lower =~ line or line[0] == ":")
     end
   end
 
   def decomposable?
-    not @body.nil? and @link.nil? and @body.lines.reduce(false) do |accu, line|
+    @content.lines.reduce(false) do |accu, line|
       accu or (Hierarchy_Upper =~ line)
     end
   end
 
   def update_content()
+    # only execute once
+    return if @expanded
+    @expanded = true
+
     # TODO this site is broken, but it's in "Buchanfänge"
     return if @title == "Der dreidimensionale euklidische Koordinatenraum"
     # TODO avoid endless recursion
     return if @title == "Sitemap: Übersicht aller Kapitel"
 
-    if expandable?
-      @body = fetch(@link)
-      @link = nil
+    # Check links first
+    if Hyperlink =~ @content
+      link = Regexp.last_match("link")
+      @content = fetch(link)
     end
 
     if splittable?
-      @body.lines.each do |line|
+      @content.lines.each do |line|
         next unless Hierarchy_Lower =~ line
         link = Regexp.last_match("link")
         name = Regexp.last_match("name")
-        add_child(BookNode.new(title: name, link: link))
+        hyperlink = make_hyperlink(name, link)
+        add_child(BookNode.new(title: name, content: hyperlink))
       end
-      @body = ""
+      @content = ""
+
     elsif decomposable?
       # get highest hierarchy of headings
-      headings = @body.lines.select { |line| Hierarchy_Upper =~ line }
+      headings = @content.lines.select { |line| Hierarchy_Upper =~ line }
       hierarchies = headings.map do |heading|
         0 if not (Hierarchy_Upper =~ heading)
         Regexp.last_match("level").length
@@ -159,7 +163,7 @@ class BookNode
       # split text according to headings of that hierarchy
       new_body = ""
       subtree  = []
-      @body.split(Heading).each do |elem|
+      @content.split(Heading).each do |elem|
         if subtree.empty? and not (Hierarchy_Upper =~ elem)
           new_body = elem
           next
@@ -178,11 +182,11 @@ class BookNode
       end
 
       # add the chunks as children and update the body
-      @body = new_body
+      @content = new_body
       subtree.each do |child|
         name, contents = child
         add_child(BookNode.new(title: strip_hyperlink(name.strip),
-                               body: contents))
+                               content: contents))
       end
     end
   end
@@ -191,8 +195,7 @@ class BookNode
     update_content
     result = "#<BookNode"
     result << " title: " + @title if @title
-    result << " link: " + @link if @link
-    result << " body: " + @body[0..10] + "..." if @body
+    result << " content: " + @content[0..10] + "..."
     result << ">"
   end
 end
@@ -206,5 +209,9 @@ end
 
 def strip_hyperlink(item)
   BookNode::Hyperlink =~ item ? Regexp.last_match["name"] : item
+end
+
+def make_hyperlink(name, link)
+  "[[#{link}|#{name}]]"
 end
 

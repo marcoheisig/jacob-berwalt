@@ -7,10 +7,11 @@ require_relative "WikiBook"
 require_relative "to_tex"
 
 # Test tag flipping
-puts ["<foo>", "if", "(|", "{{[[((<<"].collect{|s| s.flip}
+# puts ["<foo>", "if", "(|", "{{[[((<<"].collect{|s| s.flip}
 
 # Download the book description
-book = WikiBook.new(title: ARGV.first, base_url: ARGV.first)
+book = WikiBook.new(title: ARGV.first, base_url: make_hyperlink(ARGV.first,
+                                                                ARGV.first))
 
 # Until the translation is finished, we just print the TOC
 puts book.subsection(ARGV).toc
