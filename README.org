@@ -48,5 +48,5 @@ when the the String.to_tex("{{") function finds no no applicable standard
 interpretation of a block type, look up in a table of user defined parser
 methods that can handle e.g. "Mathe für Nicht-Freaks: Vorlage:Definition".
 *** Crawling and user interaction
-**** Give usefule feedback if books/articles aren't found
-**** Handle broken pages/link loops
+- Give usefule feedback if books/articles aren't found
+- Handle broken pages/link loops
